@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movie CRUD</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f5f5f5; color: #333; }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 1.25rem; }
+
+    .auth-section, .main-section { max-width: 900px; margin: 40px auto; padding: 0 16px; }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .card h2 { margin-bottom: 16px; font-size: 1.1rem; color: #1a1a2e; }
+
+    .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    label { font-size: .85rem; font-weight: 600; }
+    input, select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: .95rem;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary  { background: #1a1a2e; color: #fff; }
+    .btn-success  { background: #2ecc71; color: #fff; }
+    .btn-danger   { background: #e74c3c; color: #fff; }
+    .btn-warning  { background: #f39c12; color: #fff; }
+    .btn-sm       { padding: 5px 10px; font-size: .8rem; }
+
+    .hidden { display: none !important; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: .9rem; }
+    th { background: #f0f0f0; font-weight: 700; }
+    tr:hover td { background: #fafafa; }
+    .actions { display: flex; gap: 6px; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: .9rem;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+      z-index: 999;
+      transition: opacity .3s;
+    }
+    .toast.success { background: #2ecc71; }
+    .toast.error   { background: #e74c3c; }
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 10px;
+      padding: 28px 32px;
+      width: 360px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    }
+    .modal h3 { margin-bottom: 10px; font-size: 1.1rem; }
+    .modal p  { color: #555; font-size: .9rem; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .badge-G   { background: #d5f5e3; color: #1e8449; }
+    .badge-PG  { background: #d6eaf8; color: #1a5276; }
+    .badge-PG13{ background: #fdebd0; color: #b7770d; }
+    .badge-R   { background: #fadbd8; color: #922b21; }
+    .badge-NC17{ background: #e8daef; color: #6c3483; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Movie CRUD</h1>
+  <div id="user-info" class="hidden">
+    <span id="welcome-text"></span>
+    &nbsp;|&nbsp;
+    <button class="btn btn-danger btn-sm" onclick="logout()">ออกจากระบบ</button>
+  </div>
+</header>
+
+<!-- Login -->
+<section class="auth-section" id="auth-section">
+  <div class="card">
+    <h2>เข้าสู่ระบบ</h2>
+    <div class="form-group">
+      <label>Username</label>
+      <input id="login-username" type="text" placeholder="username" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input id="login-password" type="password" placeholder="password" />
+    </div>
+    <button class="btn btn-primary" onclick="login()">เข้าสู่ระบบ</button>
+  </div>
+</section>
+
+<!-- Main -->
+<section class="main-section hidden" id="main-section">
+
+  <!-- Add Movie -->
+  <div class="card" style="margin-bottom:24px;">
+    <h2>เพิ่มหนัง</h2>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div class="form-group" style="flex:2;min-width:160px;">
+        <label>ชื่อหนัง</label>
+        <input id="new-title" type="text" placeholder="Title" />
+      </div>
+      <div class="form-group" style="flex:1;min-width:100px;">
+        <label>ปี</label>
+        <input id="new-year" type="number" placeholder="2024" />
+      </div>
+      <div class="form-group" style="flex:1;min-width:100px;">
+        <label>Rating</label>
+        <select id="new-rating">
+          <option value="G">G</option>
+          <option value="PG">PG</option>
+          <option value="PG-13">PG-13</option>
+          <option value="R">R</option>
+          <option value="NC-17">NC-17</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-success" onclick="addMovie()">เพิ่มหนัง</button>
+  </div>
+
+  <!-- Movie List -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2>รายการหนัง</h2>
+      <button class="btn btn-primary btn-sm" onclick="loadMovies()">รีเฟรช</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>ชื่อหนัง</th><th>ปี</th><th>Rating</th><th>จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="movie-list"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Confirm Delete Modal -->
+<div class="overlay hidden" id="confirm-overlay">
+  <div class="modal">
+    <h3>ยืนยันการลบ</h3>
+    <p id="confirm-text">คุณแน่ใจว่าต้องการลบหนังเรื่องนี้?<br/>การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+    <div class="modal-actions">
+      <button class="btn" style="background:#eee;color:#333;" onclick="closeConfirm()">ยกเลิก</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">ลบ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:5000/api';
+  let token = localStorage.getItem('token') || '';
+  let currentRole = localStorage.getItem('role') || '';
+
+  function headers() {
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+  }
+
+  function showToast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+  }
+
+  async function login() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    if (!username || !password) return showToast('กรุณากรอกข้อมูล', 'error');
+
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.message || 'เข้าสู่ระบบไม่สำเร็จ', 'error');
+
+    token = data.data?.token || data.token || '';
+    currentRole = data.data?.role || data.role || '';
+    localStorage.setItem('token', token);
+    localStorage.setItem('role', currentRole);
+
+    document.getElementById('welcome-text').textContent = `สวัสดี, ${username} (${currentRole})`;
+    document.getElementById('user-info').classList.remove('hidden');
+    document.getElementById('auth-section').classList.add('hidden');
+    document.getElementById('main-section').classList.remove('hidden');
+    loadMovies();
+    showToast('เข้าสู่ระบบสำเร็จ');
+  }
+
+  function logout() {
+    token = '';
+    currentRole = '';
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    document.getElementById('user-info').classList.add('hidden');
+    document.getElementById('auth-section').classList.remove('hidden');
+    document.getElementById('main-section').classList.add('hidden');
+    document.getElementById('movie-list').innerHTML = '';
+  }
+
+  async function loadMovies() {
+    const res = await fetch(`${API}/movies`, { headers: headers() });
+    if (res.status === 401) { showToast('Session หมดอายุ', 'error'); logout(); return; }
+    const data = await res.json();
+    const movies = data.data || [];
+    const tbody = document.getElementById('movie-list');
+    const isManager = currentRole === 'MANAGER';
+
+    tbody.innerHTML = movies.map(m => `
+      <tr>
+        <td>${m.id}</td>
+        <td>${escHtml(m.title)}</td>
+        <td>${m.year_released}</td>
+        <td><span class="badge badge-${m.rating.replace('-','')}">${m.rating}</span></td>
+        <td>
+          <div class="actions">
+            ${isManager ? `<button class="btn btn-danger btn-sm" onclick="confirmDelete(${m.id}, '${escHtml(m.title)}')">ลบ</button>` : '<span style="color:#aaa;font-size:.8rem;">-</span>'}
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function addMovie() {
+    const title = document.getElementById('new-title').value.trim();
+    const year_released = parseInt(document.getElementById('new-year').value, 10);
+    const rating = document.getElementById('new-rating').value;
+
+    if (!title || isNaN(year_released)) return showToast('กรุณากรอกชื่อและปี', 'error');
+
+    const res = await fetch(`${API}/movies`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ title, year_released, rating }),
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.message || 'เพิ่มไม่สำเร็จ', 'error');
+
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-year').value = '';
+    showToast('เพิ่มหนังสำเร็จ');
+    loadMovies();
+  }
+
+  // --- Delete with confirmation modal ---
+
+  let pendingDeleteId = null;
+
+  function confirmDelete(id, title) {
+    pendingDeleteId = id;
+    document.getElementById('confirm-text').innerHTML =
+      `คุณแน่ใจว่าต้องการลบหนังเรื่อง<br/><strong>"${escHtml(title)}"</strong> ?<br/><small style="color:#e74c3c;">การกระทำนี้ไม่สามารถย้อนกลับได้</small>`;
+    document.getElementById('confirm-overlay').classList.remove('hidden');
+    document.getElementById('confirm-delete-btn').onclick = executeDelete;
+  }
+
+  function closeConfirm() {
+    pendingDeleteId = null;
+    document.getElementById('confirm-overlay').classList.add('hidden');
+  }
+
+  async function executeDelete() {
+    if (!pendingDeleteId) return;
+    closeConfirm();
+
+    const res = await fetch(`${API}/movies/${pendingDeleteId}`, {
+      method: 'DELETE',
+      headers: headers(),
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.message || 'ลบไม่สำเร็จ', 'error');
+
+    showToast('ลบหนังสำเร็จแล้ว');
+    loadMovies();
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Restore session on reload
+  if (token) {
+    const username = 'ผู้ใช้';
+    document.getElementById('welcome-text').textContent = `สวัสดี (${currentRole})`;
+    document.getElementById('user-info').classList.remove('hidden');
+    document.getElementById('auth-section').classList.add('hidden');
+    document.getElementById('main-section').classList.remove('hidden');
+    loadMovies();
+  }
+
+  // Close modal when clicking overlay background
+  document.getElementById('confirm-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeConfirm();
+  });
+</script>
+</body>
+</html>

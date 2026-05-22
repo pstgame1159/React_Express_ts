@@ -1,0 +1,60 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: movie_db
+      MYSQL_USER: movie_user
+      MYSQL_PASSWORD: movie_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./movie-crud
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      JWT_SECRET: change-this-to-a-strong-random-secret-in-production
+      JWT_EXPIRES_IN: 24h
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: movie_user
+      DB_PASSWORD: movie_password
+      DB_NAME: movie_db
+      CORS_ORIGIN: http://localhost
+    ports:
+      - "5000:5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./movie-react
+      args:
+        VITE_API_URL: http://localhost:5000/api
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+
+networks:
+  app-network:
+    driver: bridge
